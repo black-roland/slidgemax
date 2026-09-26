@@ -19,7 +19,9 @@ from slidgemax.util import (
     dialog_chat_id,
     dialog_peer_from_chat,
     dialog_peer_id,
+    contact_profile_debug,
     display_name,
+    max_client_type,
     is_call_attachment,
     is_group_chat,
     is_group_message,
@@ -77,6 +79,54 @@ def test_display_name() -> None:
     assert display_name(User(id=7, names=[Name(name="Ada")])) == "Ada"
     assert display_name(None, fallback="x") == "x"
     assert display_name(User(id=9, names=[])) == "MAX 9"
+
+
+def test_max_client_type() -> None:
+    alice = User(
+        id=6738397,
+        options=["BOT", "HAS_WEBAPP"],
+        web_app="https://alice.example/onboarding",
+        gender=1,
+    )
+    master = User(id=452, options=["BOT", "RESTRICTED"], web_app=None, gender=1)
+    assert max_client_type(alice) == "bot"
+    assert max_client_type(master) == "bot"
+    assert max_client_type(User(id=1, options=["TT", "ONEME"])) == "phone"
+    assert max_client_type(User(id=2, options=["OFFICIAL", "ONEME"])) == "phone"
+    assert max_client_type(User(id=3, options=["HAS_WEBAPP"], web_app="https://x")) == "phone"
+    assert max_client_type(User(id=4)) == "phone"
+    assert max_client_type(User.model_construct(id=5, options=None)) == "phone"
+    assert max_client_type(User.model_construct(id=6, options="BOT")) == "phone"
+    assert max_client_type(User.model_construct(id=7, options="bot")) == "phone"
+
+
+def test_contact_profile_debug_keeps_bot_shape_and_omits_phone() -> None:
+    user = User.model_validate(
+        {
+            "id": 6738397,
+            "names": [{"name": "Alice", "type": "NICK"}],
+            "phone": 79990000000,
+            "baseUrl": "https://i.oneme.ru/i?r=secret",
+            "baseRawUrl": "https://i.oneme.ru/i?r=raw",
+            "gender": 1,
+            "webApp": "https://alice.example/onboarding",
+            "options": ["BOT"],
+            "mystery": {"kind": "bot"},
+        }
+    )
+    data = contact_profile_debug(user)
+    assert "phone" not in data
+    assert "base_url" not in data
+    assert "base_raw_url" not in data
+    assert data["gender"] == 1
+    assert data["web_app"] == "https://alice.example/onboarding"
+    assert data["options"] == ["BOT"]
+    assert data["mystery"] == {"kind": "bot"}
+    assert data["__types__"]["gender"] == "int"
+    assert data["__types__"]["web_app"] == "str"
+    assert "gender" in data["__fields_set__"]
+    assert "web_app" in data["__fields_set__"]
+    assert "phone" not in data["__fields_set__"]
 
 
 def test_vcard_note() -> None:

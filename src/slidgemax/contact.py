@@ -27,7 +27,14 @@ from slixmpp.exceptions import XMPPError
 
 from . import config
 from .avatar import SetAvatarMixin
-from .util import display_name, map_presence, user_id, vcard_note
+from .util import (
+    contact_profile_debug,
+    display_name,
+    map_presence,
+    max_client_type,
+    user_id,
+    vcard_note,
+)
 
 if TYPE_CHECKING:
     from pymax.types.domain.presence import Presence
@@ -63,6 +70,7 @@ class Contact(SetAvatarMixin, LegacyContact):
                 log.debug("get_user(%s) failed", ident, exc_info=True)
                 user = None
         if user is not None:
+            log.debug("MAX contact profile %s", contact_profile_debug(user))
             self.name = display_name(user, fallback=f"MAX {ident}")
             phone = getattr(user, "phone", None)
             self.set_vcard(
@@ -70,6 +78,10 @@ class Contact(SetAvatarMixin, LegacyContact):
                 phone=str(phone) if phone else None,
                 note=vcard_note(user.description),
             )
+            desired = max_client_type(user)
+            if self.client_type != desired:
+                self.client_type = desired
+                self.update_stored_attribute(caps_ver=None)
         elif not self.name:
             self.name = f"MAX {ident}"
         self.apply_presence()

@@ -176,6 +176,36 @@ def display_name(user: Any, fallback: str | None = None) -> str:
     return fallback or "MAX user"
 
 
+_PROFILE_DEBUG_OMIT = frozenset({"phone", "base_url", "base_raw_url"})
+_PROFILE_DEBUG_TYPES = (
+    "gender",
+    "web_app",
+    "link",
+    "menu_button",
+    "options",
+    "account_status",
+    "status",
+)
+
+
+def max_client_type(user: User) -> Literal["bot", "phone"]:
+    """XMPP client type for a MAX profile. ``BOT`` in a list of options, else phone."""
+    options = getattr(user, "options", None)
+    if isinstance(options, list) and "BOT" in options:
+        return "bot"
+    return "phone"
+
+
+def contact_profile_debug(user: User) -> dict[str, Any]:
+    """Profile fields for debug logs. Omits phone and avatar URLs."""
+    data = user.model_dump(exclude=set(_PROFILE_DEBUG_OMIT))
+    data["__types__"] = {
+        name: type(getattr(user, name)).__name__ for name in _PROFILE_DEBUG_TYPES
+    }
+    data["__fields_set__"] = sorted(user.model_fields_set - _PROFILE_DEBUG_OMIT)
+    return data
+
+
 def vcard_note(description: Any) -> str | None:
     """Return a contact vCard note from a MAX profile description.
 
