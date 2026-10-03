@@ -134,18 +134,28 @@ class Contact(SetAvatarMixin, LegacyContact):
 
     async def on_friend_request(self, text: str = "") -> None:
         ident = int(self.legacy_id)
-        await self.session.add_max_contact(ident)
+        if self.client_type != "bot":
+            await self.session.add_max_contact(ident)
         self.is_friend = True
         await self.session.refresh_presence([ident])
         self.apply_presence()
         await self.accept_friend_request()
 
     async def on_friend_delete(self, text: str = "") -> None:
-        await self.session.remove_max_contact(int(self.legacy_id))
+        ident = int(self.legacy_id)
+        if any(user_id(user) == ident for user in self.session.max_contacts()):
+            await self.session.remove_max_contact(ident)
         self.is_friend = False
 
     async def on_friend_accept(self) -> None:
         self.is_friend = True
+
+    async def mark_dialog_friend(self) -> None:
+        if self.is_friend:
+            return
+        self.is_friend = True
+        self.apply_presence()
+        await self.add_to_roster()
 
 
 class Roster(LegacyRoster[Contact]):
@@ -210,6 +220,7 @@ class Roster(LegacyRoster[Contact]):
                 contact = await self.by_legacy_id(key, fetched.get(peer), True)
             else:
                 contact = await self.by_legacy_id(key)
+            contact.is_friend = True
             ready.append(contact)
 
         await session.refresh_presence([int(contact.legacy_id) for contact in ready])

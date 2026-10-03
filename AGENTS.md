@@ -50,6 +50,7 @@ Confirm APIs in the installed package (`.venv/.../pymax`) before using them. Do 
 - `client.set_presence(online=)` is synchronous and only sets `app.config.interactive`. Login and `Session.on_presence` call it after the client is ready. Log and continue on failure. Do not send opcode 1 PING from this repo; `_ping_loop` publishes the flag. Status text is not bridged. It does not fetch other users' presence.
 - Login models have no presence list. Do not parse raw login JSON. Forcing `presence_sync=-1` does not recover a snapshot.
 - Last seen at login is opcode 35 `CONTACT_PRESENCE`: request `{"contactIds": [...]}`, response `{"presence": {"<id>": {"seen": <unix>, "status": <int>}}}`. PyMax 2.4.1 does not wrap this. `Session.refresh_presence` calls `client._app.invoke`. Apply the result only after `is_friend` is true; Slidge drops presence stanzas for non-friends.
+- An existing 1:1 dialog is an XMPP friend, including bots. `Roster.fill` sets `is_friend` for address-book contacts and dialog peers. `Session._contact` sets it on the first live message, edit, or call, then calls `add_to_roster`. Search hits and bare JIDs stay non-friends until the user subscribes or a dialog event arrives. `on_friend_request` skips `add_contact` when `client_type` is `bot`. `on_friend_delete` calls `remove_contact` only if the id is in `max_contacts()`.
 - 1:1 chat ids are the XOR of the two user ids (`dialog_chat_id` / `dialog_peer_id`).
 - If PyMax does not expose the data, change PyMax, not this repo. See `CONTRIBUTING.md`.
 

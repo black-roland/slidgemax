@@ -123,13 +123,9 @@ async def test_fill_batches_dialog_peers_missing_from_address_book() -> None:
         ("30", peer_b, True),
     ]
     assert [item.legacy_id for item in yielded] == ["10", "20", "30"]
-    assert yielded[0].is_friend is True
-    assert yielded[1].is_friend is False
-    assert yielded[2].is_friend is False
+    assert all(item.is_friend for item in yielded)
     assert session.presence_ids == [10, 20, 30]
-    assert yielded[0].applied is True
-    assert yielded[1].applied is False
-    assert yielded[2].applied is False
+    assert all(item.applied for item in yielded)
 
 
 async def test_fill_does_not_retry_omitted_peer() -> None:
@@ -171,10 +167,12 @@ async def test_fill_skips_fetch_for_updated_dialog_peer() -> None:
     session = _Session(chats=[_Chat(20)], client=client)
     roster, calls = _roster(session, existing={"20"})
 
-    await _fill(roster)
+    yielded = await _fill(roster)
 
     assert client.get_users_calls == []
     assert calls == [("20",)]
+    assert yielded[0].is_friend is True
+    assert yielded[0].applied is True
 
 
 async def test_fill_skips_self_group_and_address_book_dialog() -> None:
@@ -200,3 +198,5 @@ async def test_fill_skips_self_group_and_address_book_dialog() -> None:
     assert client.get_users_calls == [[20]]
     assert calls == [("10", friend), ("20", peer, True)]
     assert [item.legacy_id for item in yielded] == ["10", "20"]
+    assert all(item.is_friend for item in yielded)
+    assert all(item.applied for item in yielded)

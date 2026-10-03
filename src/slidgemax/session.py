@@ -540,7 +540,9 @@ class Session(BaseSession[Roster, LegacyBookmarks]):
             contact.apply_presence(self._presence[uid])
 
     async def _contact(self, peer_id: int):
-        return await self.contacts.by_legacy_id(str(peer_id))
+        contact = await self.contacts.by_legacy_id(str(peer_id))
+        await contact.mark_dialog_friend()
+        return contact
 
     async def _on_max_message(self, message: Message) -> None:
         peer = self.resolve_dialog_peer(message)
