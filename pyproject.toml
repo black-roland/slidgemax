@@ -9,7 +9,7 @@ authors = [{ name = "Black Roland" }]
 keywords = ["xmpp", "max", "slidge", "gateway", "transport", "pymax"]
 dependencies = [
     "slidge>=0.5.0",
-    "maxapi-python>=2.4.1",
+    "maxapi-python>=2.5.0",
 ]
 
 [project.scripts]

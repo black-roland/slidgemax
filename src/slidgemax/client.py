@@ -12,26 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""PyMax client wrapper that will not relogin on its own.
+"""Auth policy around PyMax login.
 
-PyMax 2.4.1 ``Client.start()`` deletes a revoked session and calls
-``request_code()``, then reconnect can repeat that until MAX rate-limits the
-phone. This wrapper keeps network reconnect and stops on a dead token.
+PyMax 2.5.0 ``Client.start()`` raises on a revoked login token when
+``ExtraConfig.relogin`` is false, and reconnects only on network errors.
+Unattended sessions still refuse SMS, so a missing session file cannot fall
+through to ``ConsoleSmsCodeProvider``. Registration may drop a revoked session
+and request SMS once.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from pymax import Client
 from pymax.exceptions import ApiError
 from pymax.protocol.enums import Opcode
-from pymax.session.store import SessionStore
 
 if TYPE_CHECKING:
+    from pymax import Client
     from pymax.app import App
     from pymax.auth.models import AuthResult
 
@@ -68,73 +68,18 @@ def is_revoked_login_token(exc: BaseException) -> bool:
     )
 
 
-class MaxClient(Client):
-    """``Client`` whose ``start()`` does not relogin or tight-loop on a dead token."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._stop_requested = False
-        super().__init__(*args, **kwargs)
-
-    async def stop(self) -> None:
-        self._stop_requested = True
-        await super().stop()
-
-    async def start(self) -> None:
-        while not self._stop_requested:
-            try:
-                await self.connect()
-                if not self.is_connected:
-                    return
-                await self._connection.wait_closed()
-            except asyncio.CancelledError:
-                await self.close()
-                raise
-            except LoginTokenRevoked:
-                await self.close()
-                raise
-            except ApiError as exc:
-                await self.close()
-                if is_revoked_login_token(exc):
-                    log.error("MAX login token revoked; not requesting a new SMS code")
-                    raise LoginTokenRevoked(REVOKED_LOGIN_MESSAGE) from exc
-                raise
-            except (ConnectionError, EOFError, OSError, TimeoutError):
-                await self.close()
-                if self._stop_requested or not self.extra_config.reconnect:
-                    raise
-                log.info(
-                    "MAX connection failed; reconnecting in %s seconds",
-                    self.extra_config.reconnect_delay,
-                )
-                await asyncio.sleep(self.extra_config.reconnect_delay)
-                if self._stop_requested:
-                    return
-                self._reset_runtime()
-            except Exception:
-                await self.close()
-                raise
-            else:
-                await self.close()
-                return
-
-
-async def discard_saved_session(client: Client) -> None:
-    """Delete the local MAX session so the next login can use SMS.
-
-    Call this only from an interactive registration, and only once.
-    """
-    await client.close()
-    store = SessionStore(client.work_dir, client.session_name)
+async def start_client(client: Client) -> None:
     try:
-        await store.delete_all_sessions()
-    finally:
-        await store.close()
-    if getattr(client, "_config", None) is not None:
-        client._reset_runtime()
+        await client.start()
+    except ApiError as exc:
+        if is_revoked_login_token(exc):
+            log.error("MAX login token revoked; not requesting a new SMS code")
+            raise LoginTokenRevoked(REVOKED_LOGIN_MESSAGE) from exc
+        raise
 
 
 async def start_once_or_recover(
-    client: MaxClient,
+    client: Client,
     recover: Callable[[], bool],
 ) -> None:
     """Run ``start()``. On a revoked token, drop the saved session and try once more.
@@ -143,10 +88,14 @@ async def start_once_or_recover(
     that already logged in must pass a callback that returns false.
     """
     try:
-        await client.start()
+        await start_client(client)
     except LoginTokenRevoked:
         if not recover():
             raise
         log.warning("MAX login token revoked during registration; requesting SMS once")
-        await discard_saved_session(client)
-        await client.start()
+        try:
+            await client.relogin()
+        except ApiError as exc:
+            if is_revoked_login_token(exc):
+                raise LoginTokenRevoked(REVOKED_LOGIN_MESSAGE) from exc
+            raise

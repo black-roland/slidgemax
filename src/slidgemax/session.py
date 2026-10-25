@@ -44,8 +44,8 @@ from .auth import QueuePasswordProvider, QueueSmsProvider
 from .client import (
     REVOKED_LOGIN_MESSAGE,
     LoginTokenRevoked,
-    MaxClient,
     RefuseSmsAuth,
+    start_client,
 )
 from .contact import Roster
 from .util import (
@@ -124,7 +124,7 @@ def make_client(
         kwargs["auth_flow"] = RefuseSmsAuth()
     if password_provider is not None:
         kwargs["password_provider"] = password_provider
-    return MaxClient(**kwargs)
+    return Client(**kwargs)
 
 
 class Session(BaseSession[Roster, LegacyBookmarks]):
@@ -281,7 +281,7 @@ class Session(BaseSession[Roster, LegacyBookmarks]):
     async def _run_client(self) -> None:
         assert self.client is not None
         try:
-            await self.client.start()
+            await start_client(self.client)
         except LoginTokenRevoked as exc:
             self._client_error = str(exc)
             self.log.error("%s", exc)

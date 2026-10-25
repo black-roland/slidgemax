@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -559,7 +559,7 @@ wheels = [
 
 [[package]]
 name = "maxapi-python"
-version = "2.4.1"
+version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -572,9 +572,9 @@ dependencies = [
     { name = "websockets" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/a6/77a04168c570bd44f0066760649317482148b3c9849ab266661454b38f52/maxapi_python-2.4.1.tar.gz", hash = "sha256:c68a642845b6794170c84251058b218773f88416b04f689cce837f49b59bf31a", size = 338773, upload-time = "2026-08-24T19:51:01.011Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/33/2cdfec83e03bbc8df65666f51ffe64cbcb8d802b9845538faddbce59c007/maxapi_python-2.5.0.tar.gz", hash = "sha256:e0e49707434e64d2befa7199b932005100b7608f82fd4457bbd638205fe41dd7", size = 375560, upload-time = "2026-10-25T18:35:42.553Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/f6/78e8c997cbdd6ff58096305472e308167e91ab9f5f901705a58a02bad783/maxapi_python-2.4.1-py3-none-any.whl", hash = "sha256:49c996cebebdcd490b8fc1424c84faad3c33d0b75eff4bb86cf1de9d968d76ea", size = 163480, upload-time = "2026-08-24T19:50:59.602Z" },
+    { url = "https://files.pythonhosted.org/packages/35/ee/4d2f076da9849a45804d888252008a343be33d591960a4d9423a0fb6f649/maxapi_python-2.5.0-py3-none-any.whl", hash = "sha256:20dcf9bfe658fd75434cc370f12c6a0114d85ee109309789c19174710cb8f479", size = 195222, upload-time = "2026-10-25T18:35:41.483Z" },
 ]
 
 [[package]]
@@ -1169,7 +1169,7 @@ wheels = [
 
 [[package]]
 name = "slidgemax"
-version = "0.2.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "maxapi-python" },
@@ -1190,7 +1190,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "maxapi-python", specifier = ">=2.4.1" },
+    { name = "maxapi-python", specifier = ">=2.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "slidge", specifier = ">=0.5.0" },
